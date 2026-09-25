@@ -1,0 +1,2 @@
+if(!require("usethis")) install.packages("usethis")
+usethis::git_sitrep()

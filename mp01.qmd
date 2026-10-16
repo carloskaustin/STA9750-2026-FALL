@@ -1,5 +1,628 @@
 ---
-title: "Mini-Project Placeholder"
+title: "Mini Project #1: What We Watched: Exploring Netflix Viewing Data"
+author: "Carlos Austin"
+date: today
+format:
+  html:
+    theme: flatly
+    code-fold: true
+    code-summary: "Show Code"
+    toc: true
+    toc-location: right
+    toc-title: "Contents"
+    toc-depth: 3
 ---
 
-This is a placeholder for STA9750 Mini-Project 1. Check back soon for more!
+## Introduction
+
+This project analyzes Netflix's *What We Watched* reports from 2023 through the first half of 2026 to identify trends in content popularity and viewer engagement. I have summarized my findings in a memo to Netflix leadership, highlighting the most important insights from the analysis and providing recommendations for the company's future content strategy.
+
+
+## Strategy Memo
+::: {.callout-note appearance="simple"}
+
+**TO:** Netflix Leadership  
+**FROM:** Carlos Austin  
+**DATE:** October 16, 2026  
+**SUBJECT:** Netflix Content Strategy for 2027 and Beyond
+
+
+Netflix engagement data from January 2023 through June 2026 suggests that Netflix should prioritize original television series with global distribution potential while maintaining a diversified portfolio of films and regionally targeted productions. Two findings support this recommendation. First, content classified as television shows consistently accounts for most of the viewing hours in recent reporting periods. Second, globally available titles generate a disproportionately large share of engagement relative to their representation in the catalog.
+
+Based on these findings, I believe that Netflix can strengthen its strategy by investing in show based storytelling and expanding the international reach of successful productions.
+
+### 1. Prioritize Original Television Series While Maintaining a Selective Film Portfolio
+
+Television shows account for the majority of Netflix viewing hours. In the first half of 2026, shows represented approximately 94.8% of total viewing hours, while movies accounted for only 5.2% for movies. This pattern has remained stable since the second half of 2023, when shows accounted for 95.8% of viewing hours. Across reporting periods, the share of viewing hours from shows remained above 94%.
+
+The data also suggests that first seasons play an important role in sustaining long-term viewership. Five of the ten most consistently popular titles are explicitly labeled as first seasons, including *The Night Agent*, *Wednesday*, *Bridgerton*, and *Squid Game*. This raises important questions about how viewership changes as shows progress through multiple seasons. For example, does viewership typically decline significantly after the first season? How many seasons can a show maintain peak viewership before experiencing a drop-off? Do multiseason shows generate greater engagement than miniseries or limited series? Netflix could benefit from conducting further analysis to answer these questions, as the findings could help inform decisions about renewing existing series versus investing in new original productions.
+
+For 2027 and beyond, Netflix should prioritize original series with the potential to develop into successful multiseason productions. In particular, Netflix should consider allocating additional resources toward renewing established series that demonstrate sustained viewership across multiple reporting periods. These productions may provide more predictable audience engagement than entirely new releases.
+
+However, Netflix should not interpret these findings as evidence that movies are unimportant. Total viewing hours naturally favor longer television productions because a complete season can contain substantially more content than a feature film. Therefore, Netflix should maintain a selective original film strategy while placing greater emphasis on serialized productions that demonstrate sustained audience demand.
+
+### 2. Expand Globally Available Original Content
+
+The data also reveals an important relationship between content availability and audience engagement. Approximately 24.6% of distinct titles in the dataset were classified as globally available, while this content accounted for 52.07% of total viewing hours. This illustrates that globally available content plays a disproportionately important role in Netflix's overall engagement. Although globally available titles represent a minority of the catalog, they collectively generate more than half of reported viewing hours.
+
+One reason for this could be that global distribution allows for productions to reach larger audiences. A title available across multiple markets has more opportunities to attract viewers than content restricted to particular regions.
+
+For the future, Netflix should prioritize securing international distribution rights for original productions whenever possible. This would allow Netflix to capitalize on successful titles across multiple geographic markets rather than limiting their potential audience.
+
+However, the higher viewing share of globally available titles does not necessarily mean global availability causes stronger performance. These titles may already benefit other variables such as larger production budgets or stronger marketing campaigns. Netflix should therefore evaluate the incremental benefits of global distribution against its associated costs.
+
+### Conclusion
+
+Together, these findings suggest two main priorities for Netflix's original content strategy.
+
+**First**, Netflix should emphasize the development and renewal of original television series that demonstrate consistent engagement. They could do this by identifying productions capable of attracting viewers across multiple reporting periods.
+
+**Second**, Netflix should increase the international accessibility of successful original productions. Broad distribution, supported by localization and region-specific marketing, could help maximize engagement from content investments.
+
+Netflix's engagement data suggests that television series and globally available titles are central to the companies future success. Going forward, Netflix should pursue a strategy centered on globally accessible original series. By combining sustained audience engagement with larger distribution, Netflix can work toward maximizing the value of its content.
+
+:::
+
+## Task 1: Data Acquisition
+
+In this step, I downloaded Netflix's *What We Watched* reports and combined them into a single dataset.
+
+```{r}
+#| code-fold: true
+#| output: false
+#' Acquire Netflix What We Watched Reports
+#' 
+#' This function will acquire and standardize all data for MP#01
+#' from Netflix. Because Netflix hosts the data files behind a CDN, we
+#' are accessing the release pages and automatically extracting links to the
+#' relevant files (with CDN hash). 
+#' 
+#' After import, files are stacked vertically and some basic cleaning is
+#' performed. 
+load_netflix_data <- function(){
+  # Note to students: Make sure you have installed the tidyverse and fs packages
+  #                   before beginning this assignment. If you aren't sure,
+  #                   simply run `library(tidyverse)` at your R Console and, if
+  #                   you don't see an error message, `tidyverse` has been 
+  #                   installed. (Same for `fs`) If you still need to install
+  #                   either package, use the `install.packages` function as 
+  #                   demonstrated in class.
+  library(tidyverse)
+  library(rvest)
+  library(readxl)
+  library(fs)
+  
+  data_dir <- path("data", "mp01")
+    
+  if(!dir_exists(data_dir)){
+    dir_create(data_dir, showWarnings=FALSE, recurse=TRUE)
+  }
+  
+  NETFLIX_URLS <- list(
+    `2023H1` = "https://about.netflix.com/news/what-we-watched-a-netflix-engagement-report",
+    `2023H2` = "https://about.netflix.com/news/what-we-watched-the-second-half-of-2023",
+    `2024H1` = "https://about.netflix.com/news/what-we-watched-the-first-half-of-2024",
+    `2024H2` = "https://about.netflix.com/news/what-we-watched-the-second-half-of-2024",
+    `2025H1` = "https://about.netflix.com/news/what-we-watched-the-first-half-of-2025",
+    `2025H2` = "https://about.netflix.com/news/what-we-watched-the-second-half-of-2025",
+    `2026H1` = "https://about.netflix.com/news/what-we-watched-the-first-half-of-2026"
+  )
+  
+  download_if_needed <- function(url, local){
+    if(!file_exists(local)){
+      download.file(url, local, quiet = TRUE, mode = "wb")
+    }
+    
+    return(local)
+  }
+    
+  NETFLIX_URLS |> 
+    map(read_html) |> 
+    map(html_element, xpath = "//a[contains(@href, '.xlsx')]") |> 
+    map_chr(html_attr, "href") |> 
+    enframe("period", "url") |> 
+   mutate(path = path(data_dir, paste0(period, ".xlsx")), 
+          path = map2(url, path, download_if_needed), 
+          data = map(path, read_excel, skip=3, na="*"), 
+          data = map(data, \(x) x |> mutate(`Release Date` = as.Date(`Release Date`)))) |>
+    unnest(data) |> 
+    select(-url, -path) |> 
+    mutate(year=str_sub(period, 1, 4), 
+           half=str_sub(period, start=6), 
+           period_start = make_date(year, if_else(half==1, 1, 7), 1), 
+           period_end = make_date(year, if_else(half==1, 6, 12), if_else(half==1, 30, 31))) |> 
+    filter(!is.na(`Hours Viewed`)) |> 
+    mutate(live_event = !is.na(Runtime) & str_detect(Runtime, "\\d+:\\d+\\*"), 
+           clean_time = str_remove(Runtime, fixed("*")),
+           Runtime = 60 * hour(hm(clean_time)) + minute(hm(clean_time))) |>
+    select(-clean_time) |>
+    mutate(Runtime = coalesce(Runtime, mean(Runtime, na.rm=TRUE)), 
+           .by=Title, 
+           Title = stringi::stri_trans_general(Title, "Latin-ASCII"),
+           Title = str_remove(Title, " // .*"), 
+           Title = str_remove(Title, "[^[:ascii:]].*"), 
+           Title = str_trim(Title)) |>
+    filter_out(Title == "") |>
+    select(year, 
+           period, 
+           period_start, 
+           period_end, 
+           Title, 
+           -half, 
+           Runtime, 
+           Views, 
+           `Hours Viewed`, 
+           `Release Date`,
+           `Available Globally?`, 
+           live_event)
+}
+
+NETFLIX_DATA <- load_netflix_data()
+
+```
+
+## Task 2: Fix Column Titles 
+I cleaned the data by converting all column names to lowercase and replacing spaces with underscores. This made the variable names more consistent and easier to reference throughout the analysis.
+```{r}
+#| code-fold: true
+#| output: false
+NETFLIX_DATA <- NETFLIX_DATA |>
+  rename(
+    title = Title,
+    runtime = Runtime,
+    views = Views,
+    hours_viewed = `Hours Viewed`,
+    release_date = `Release Date`,
+    available_globally = `Available Globally?`
+  )
+
+names(NETFLIX_DATA)
+```
+
+## Task 3: Fix Column Types
+I continued the data cleaning process by converting the `year` column to an integer and the `available_globally` column to a logical (TRUE/FALSE) variable. These changes ensured the variables had the appropriate data types for analysis.
+```{r}
+#| code-fold: true
+#| output: false
+NETFLIX_DATA <- NETFLIX_DATA |>
+  mutate(
+    year = as.integer(year),
+    available_globally = available_globally == "Yes"
+  )
+
+glimpse(NETFLIX_DATA)
+```
+
+## Task 4: Initial EDA Pass
+
+The dataset contains 61,892 observations across 11 variables. The data covers seven reporting periods from 2023 through the first half of 2026 and includes 24,427 unique titles. The skim() results show many missing data fields, particularly in the release_date column (35,251 missing values), views column (18,198), and runtime column (13,085). Also, viewing hours are heavily right-skewed and has a mean of approximately 8.27 million hours compared to a median of 1.8 million. This suggests that a relatively small number of highly popular titles account for disproportionately large amounts of viewing time.
+
+```{r}
+#| code-fold: true
+library(skimr)
+
+glimpse(NETFLIX_DATA)
+
+skim(NETFLIX_DATA)
+```
+
+
+
+## Task 5: Exploratory Questions - Inline Value
+
+I answered several exploratory questions about the data:
+
+### Question 1: What date range is covered by this data set?
+
+```{r}
+#| code-fold: true
+#| output: false
+NETFLIX_DATA |>
+  summarise(
+    earliest_date = min(period_start),
+    latest_date = max(period_end)
+  )
+```
+
+The Netflix dataset covers the period from `r min(NETFLIX_DATA$period_start)` to `r max(NETFLIX_DATA$period_end)`.
+
+
+
+### Question 2: How many different shows and movies are covered in this data set?
+
+```{r}
+#| code-fold: true
+#| output: false
+NETFLIX_DATA |>
+  summarise(
+    total_titles = n_distinct(title)
+  )
+```
+
+The Netflix dataset contains `r n_distinct(NETFLIX_DATA$title)` distinct shows and movies, counting individual seasons as separate titles.
+
+
+
+### Question 3: How many total hours have been spent watching shows from the *Bridgerton* universe?
+
+```{r}
+#| code-fold: true
+#| output: false
+NETFLIX_DATA |>
+  filter(str_detect(title, regex("Bridgerton", ignore_case = TRUE))) |>
+  summarise(
+    total_hours = sum(hours_viewed, na.rm = TRUE)
+  )
+```
+
+Shows from the *Bridgerton* universe have accumulated a total of `r format(sum(NETFLIX_DATA$hours_viewed[str_detect(NETFLIX_DATA$title, regex("Bridgerton", ignore_case = TRUE))], na.rm = TRUE), big.mark = ",", scientific = FALSE)` viewing hours.
+
+
+
+### Question 4: How many total hours have been spent watching the five seasons of *Stranger Things*?
+
+```{r}
+#| code-fold: true
+#| output: false
+stranger_things_data <- NETFLIX_DATA |>
+  filter(str_detect(title, "Stranger Things")) |>
+  filter_out(str_detect(title, "Beyond Stranger Things")) |>
+  filter_out(str_detect(title, "Tales from")) |>
+  filter_out(str_detect(title, "Fireplace"))
+
+stranger_things_data |>
+  summarise(
+    total_hours = sum(hours_viewed, na.rm = TRUE)
+  )
+```
+
+The five seasons of *Stranger Things* have accumulated a total of `r format(sum(stranger_things_data$hours_viewed, na.rm = TRUE), big.mark = ",", scientific = FALSE)` viewing hours.
+
+
+
+### Question 5: What percentage of total watch time was spent on the Top 10 titles of 2026H1?
+
+```{r}
+#| code-fold: true
+#| output: false
+netflix_2026H1 <- NETFLIX_DATA |>
+  filter(period == "2026H1")
+
+top_10_hours <- netflix_2026H1 |>
+  slice_max(order_by = hours_viewed, n = 10, with_ties = FALSE) |>
+  summarise(total = sum(hours_viewed)) |>
+  pull(total)
+
+total_hours <- sum(netflix_2026H1$hours_viewed)
+
+top_10_percentage <- (top_10_hours / total_hours) * 100
+
+top_10_percentage
+```
+
+The Top 10 titles of 2026H1 accounted for `r round(top_10_percentage, 2)`% of total Netflix viewing hours during that reporting period.
+
+
+
+### Question 6: What fraction of Netflix's catalog is globally available? (Answer both by title and weighted by hours viewed.)
+
+```{r}
+#| code-fold: true
+#| output: false
+# Fraction of unique titles globally available
+title_fraction <- NETFLIX_DATA |>
+  filter(!is.na(available_globally)) |>
+  group_by(title) |>
+  summarise(
+    globally_available = any(available_globally),
+    .groups = "drop"
+  ) |>
+  summarise(
+    fraction = mean(globally_available)
+  ) |>
+  pull(fraction)
+
+# Fraction of viewing hours from globally available titles
+hours_fraction <- NETFLIX_DATA |>
+  filter(!is.na(available_globally)) |>
+  summarise(
+    fraction = sum(hours_viewed[available_globally]) /
+               sum(hours_viewed)
+  ) |>
+  pull(fraction)
+
+title_fraction
+hours_fraction
+```
+
+Approximately `r round(title_fraction * 100, 2)`% of distinct Netflix titles are globally available, while `r round(hours_fraction * 100, 2)`% of viewing hours come from globally available titles.
+
+## Task 6: Exploratory Questions - Table Answers
+
+I continued exploratory analysis by creating visuals to summarize viewership trends.
+
+### Question 1: What was the top title (by total hours viewed) in each period and what fraction of total viewership did it capture?
+
+```{r}
+#| code-fold: true
+library(gt)
+
+top_titles <- NETFLIX_DATA |>
+  group_by(period) |>
+  mutate(
+    total_period_hours = sum(hours_viewed, na.rm = TRUE)
+  ) |>
+  slice_max(
+    order_by = hours_viewed,
+    n = 1,
+    with_ties = FALSE
+  ) |>
+  mutate(
+    viewership_share = hours_viewed / total_period_hours
+  ) |>
+  ungroup() |>
+  select(period, title, hours_viewed, viewership_share) |>
+  arrange(period)
+
+top_titles |>
+  gt() |>
+  tab_header(
+    title = "Most-Watched Netflix Title by Reporting Period",
+    subtitle = "Top title and its share of total viewing hours"
+  ) |>
+  cols_label(
+    period = "Period",
+    title = "Top Title",
+    hours_viewed = "Hours Viewed",
+    viewership_share = "Share of Viewership"
+  ) |>
+  fmt_number(
+    columns = hours_viewed,
+    decimals = 0
+  ) |>
+  fmt_percent(
+    columns = viewership_share,
+    decimals = 2
+  ) |>
+  opt_row_striping() |>
+  tab_options(
+    heading.background.color = "#B20710",
+    heading.title.font.size = 20,
+    table.font.size = 13,
+    table.border.top.color = "#B20710",
+    table.border.bottom.color = "#B20710",
+    row.striping.background_color = "#F5F5F5"
+  ) |>
+  tab_style(
+    style = cell_text(color = "white", weight = "bold"),
+    locations = cells_title(groups = "title")
+  ) |>
+  tab_style(
+    style = cell_text(color = "white"),
+    locations = cells_title(groups = "subtitle")
+  )
+```
+
+
+### Question 2: How has Netflix's catalog changed in size over the periods for which we have data?
+
+```{r}
+#| code-fold: true
+
+catalog_size <- NETFLIX_DATA |>
+  group_by(period) |>
+  summarise(
+    number_of_titles = n_distinct(title),
+    total_runtime_hours = sum(runtime, na.rm = TRUE) / 60
+  ) |>
+  arrange(period)
+
+catalog_size |>
+  gt() |>
+  tab_header(
+    title = "Netflix Catalog Size by Reporting Period",
+    subtitle = "Number of titles and total runtime in hours"
+  ) |>
+  cols_label(
+    period = "Reporting Period",
+    number_of_titles = "Number of Titles",
+    total_runtime_hours = "Total Runtime (Hours)"
+  ) |>
+  fmt_number(
+    columns = c(number_of_titles, total_runtime_hours),
+    decimals = 0
+  ) |>
+  opt_row_striping() |>
+  tab_options(
+    heading.background.color = "#B20710",
+    heading.title.font.size = 20,
+    table.font.size = 13,
+    table.border.top.color = "#B20710",
+    table.border.bottom.color = "#B20710",
+    row.striping.background_color = "#F5F5F5"
+  ) |>
+  tab_style(
+    style = cell_text(color = "white", weight = "bold"),
+    locations = cells_title(groups = "title")
+  ) |>
+  tab_style(
+    style = cell_text(color = "white"),
+    locations = cells_title(groups = "subtitle")
+  )
+```
+
+
+### Question 3: Which titles have had the most consistently high viewership across all periods?
+
+```{r}
+#| code-fold: true
+
+consistent_titles <- NETFLIX_DATA |>
+  group_by(title) |>
+  summarise(
+    periods_present = n_distinct(period),
+    average_hours = mean(hours_viewed, na.rm = TRUE),
+    total_hours = sum(hours_viewed, na.rm = TRUE)
+  ) |>
+  filter(periods_present == n_distinct(NETFLIX_DATA$period)) |>
+  arrange(desc(average_hours)) |>
+  slice_head(n = 10)
+
+consistent_titles |>
+  gt() |>
+  tab_header(
+    title = "Netflix's Most Consistently Popular Titles",
+    subtitle = "Top 10 titles appearing in all reporting periods"
+  ) |>
+  cols_label(
+    title = "Title",
+    periods_present = "Periods",
+    average_hours = "Average Hours Viewed",
+    total_hours = "Total Hours Viewed"
+  ) |>
+  fmt_number(
+    columns = c(average_hours, total_hours),
+    decimals = 0
+  ) |>
+  opt_row_striping() |>
+  tab_options(
+    heading.background.color = "#B20710",
+    heading.title.font.size = 20,
+    table.font.size = 13,
+    table.border.top.color = "#B20710",
+    table.border.bottom.color = "#B20710",
+    row.striping.background_color = "#F5F5F5"
+  ) |>
+  tab_style(
+    style = cell_text(color = "white", weight = "bold"),
+    locations = cells_title(groups = "title")
+  ) |>
+  tab_style(
+    style = cell_text(color = "white"),
+    locations = cells_title(groups = "subtitle")
+  )
+```
+
+
+### Question 4: Within each period, what fraction of viewing time was spent on shows versus movies?
+
+```{r}
+#| code-fold: true
+
+shows_vs_movies <- NETFLIX_DATA |>
+  mutate(
+    content_type = if_else(
+      str_detect(title, regex("Season", ignore_case = TRUE)) |
+        runtime > 240,
+      "Show",
+      "Movie",
+      missing = "Movie"
+    )
+  ) |>
+  group_by(period, content_type) |>
+  summarise(
+    total_hours = sum(hours_viewed, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  group_by(period) |>
+  mutate(
+    fraction = total_hours / sum(total_hours)
+  ) |>
+  ungroup() |>
+  select(period, content_type, fraction) |>
+  arrange(period, content_type)
+
+shows_vs_movies |>
+  gt() |>
+  tab_header(
+    title = "Netflix Viewing Time: Shows vs. Movies",
+    subtitle = "Share of total viewing hours by reporting period"
+  ) |>
+  cols_label(
+    period = "Reporting Period",
+    content_type = "Content Type",
+    fraction = "Share of Viewing Time"
+  ) |>
+  fmt_percent(
+    columns = fraction,
+    decimals = 1
+  ) |>
+  opt_row_striping() |>
+  tab_options(
+    heading.background.color = "#B20710",
+    heading.title.font.size = 20,
+    table.font.size = 13,
+    table.border.top.color = "#B20710",
+    table.border.bottom.color = "#B20710",
+    row.striping.background_color = "#F5F5F5"
+  ) |>
+  tab_style(
+    style = cell_text(color = "white", weight = "bold"),
+    locations = cells_title(groups = "title")
+  ) |>
+  tab_style(
+    style = cell_text(color = "white"),
+    locations = cells_title(groups = "subtitle")
+  )
+```
+
+
+### Question 5: How does the performance of live events compare to pre-taped content? Does the average live event draw more viewership? How about top-tier content?
+
+```{r}
+#| code-fold: true
+
+live_comparison <- NETFLIX_DATA |>
+  mutate(
+    content_type = if_else(
+      live_event,
+      "Live Event",
+      "Pre-taped Content"
+    )
+  ) |>
+  group_by(content_type) |>
+  summarise(
+    number_of_titles = sum(!is.na(views)),
+    average_views = mean(views, na.rm = TRUE),
+    top_tier_views = quantile(views, 0.90, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+live_comparison |>
+  gt() |>
+  tab_header(
+    title = "Netflix Live Events vs. Pre-taped Content",
+    subtitle = "Comparison of viewing performance by content type"
+  ) |>
+  cols_label(
+    content_type = "Content Type",
+    number_of_titles = "Observations",
+    average_views = "Average Views",
+    top_tier_views = "90th Percentile Views"
+  ) |>
+  fmt_number(
+    columns = c(number_of_titles, average_views, top_tier_views),
+    decimals = 0
+  ) |>
+  opt_row_striping() |>
+  tab_options(
+    heading.background.color = "#B20710",
+    heading.title.font.size = 20,
+    table.font.size = 13,
+    table.border.top.color = "#B20710",
+    table.border.bottom.color = "#B20710",
+    row.striping.background_color = "#F5F5F5"
+  ) |>
+  tab_style(
+    style = cell_text(color = "white", weight = "bold"),
+    locations = cells_title(groups = "title")
+  ) |>
+  tab_style(
+    style = cell_text(color = "white"),
+    locations = cells_title(groups = "subtitle")
+  )
+```
+::: {.callout-note collapse="true"}
+## AI Usage Statement
+Chatgpt was used to help with formatting code and customizing the visualizations. I also used it to help with idea generation for the memo. However, all the written portions of the submission were done indepently.
+:::

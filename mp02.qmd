@@ -469,7 +469,7 @@ NYC_Longest_Trip <- NTD_SERVICE |>
 
 The NYC transit service with the longest average passenger trip is `r NYC_Longest_Trip$AGENCY` (`r NYC_Longest_Trip$mode`, `r NYC_Longest_Trip$type_of_service`), with an average trip length of `r round(NYC_Longest_Trip$Avg_Trip_Length, 2)` miles.
 
-###Task 4 & 5
+### Task 4 & 5
 
 Here, I joined the three datasets to combine transit energy consumption, passenger service information, and state-level electricity emissions data.
 ```{r}
@@ -565,7 +565,7 @@ TRANSIT_EMISSIONS <- TRANSIT_COMBINED |>
 
 ```
 
-###Task 6
+### Task 6
 
 During this phase, I normalized each transit agency's total estimated CO₂ emissions. This allowed for more meaningful comparisons of emissions efficiency across transit agencies of different sizes.
 ```{r}
@@ -683,7 +683,7 @@ ggplot(
   theme_minimal()
 ```
   
-###Task 7:
+### Task 7:
 
 Lastly, I identified the most and least emissions-efficient transit agencies using estimated CO₂ emissions per passenger mile. I compared the winning agencies against the national median to highlight differences in environmental performance and determine the recipients of the GTA Green Transit Awards.
   
